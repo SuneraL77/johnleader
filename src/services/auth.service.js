@@ -52,6 +52,11 @@ export const createUser = async (userData) =>{
 
 }
 
+export const findUserId = async (userId) =>{
+  const user = await UserModel.findById(userId);
+  return user
+}
+
 
 
 export const signUser = async (email,password) =>{
