@@ -3,51 +3,48 @@ import { ProductModel, UserModel } from "../models/index.js";
 import fs from "fs/promises";
 import slugify from "slugify";
 
+
 export const createProduct = async (ProductData) => {
   const {
-    title,
-    price,
-    description,
-    category,
-    subs,
-    quantity,
-    images,
-    color,
-    brand,
+      title,
+      prices,
+      description,
+      category,
+      quantity,
+      images,
+      gender
   } = ProductData;
   if (
-    !title ||
-    !price ||
-    !description ||
-    !category ||
-    !subs ||
-    !quantity ||
-    !images ||
-    !color ||
-    !brand
+      !title ||
+      !prices ||
+      !description ||
+      !category ||
+      !quantity ||
+      !images
+      ||!gender
+      
   ) {
-    images.forEach(async (file) => {
-      try {
-        await fs.unlink(file.path);
-      } catch (error) {
-        console.log(error);
-      }
-    });
-    throw createHttpError.BadRequest("All fields requied");
+      images.forEach(async (file) => {
+          try {
+              await fs.unlink(file.path);
+          } catch (error) {
+              console.log(error);
+          }
+      });
+      throw createHttpError.BadRequest("All fields required");
   }
 
   const product = new ProductModel({
-    title,
-    slug: slugify(title),
-    description,
-    quantity,
-    price,
-    category,
-    subs,
-    quantity,
-    images,
-    color,
-    brand,
+      title,
+      slug: slugify(title),
+      description,
+      quantity,
+      prices,
+      category,
+      quantity,
+      images,
+      color,
+      gender
   });
   await product.save();
   return product;
@@ -156,10 +153,57 @@ export const listRelated = async (productId) => {
 
   return related;
 }
+export const updateProduct = async (productId, updatedData) => {
+  const {
+      title,
+      prices,
+      description,
+      category,
+      quantity,
+      images,
+      color,
+      brand,
+  } = updatedData;
+
+  // Check if all required fields are provided
+  if (
+      !title ||
+      !prices ||
+      !description ||
+      !category ||
+      !quantity ||
+      !images
+  ) {
+      throw createHttpError.BadRequest("All fields required");
+  }
+
+  // Find the existing product by its ID
+  let product = await ProductModel.findById(productId);
+
+  if (!product) {
+      throw createHttpError.NotFound("Product not found");
+  }
+
+  // Update the product's properties
+  product.title = title;
+  product.slug = slugify(title);
+  product.description = description;
+  product.quantity = quantity;
+  product.prices = prices;
+  product.category = category;
+  product.images = images;
+  product.color = color;
+  product.brand = brand;
+
+  // Save the updated product
+  await product.save();
+  return product;
+};
+
 const handleCategory = async (category) =>{
   let products = await ProductModel.find({ category })
       .populate("category", "_id name")
-      .populate("subs", "_id name")
+
    return products
 }
 const handelPrice = async (price) => {
@@ -170,14 +214,14 @@ const handelPrice = async (price) => {
     },
   })
     .populate("category", "_id name")
-    .populate("subs", "_id name");
+
 
   return products;
 };
 const handleQuery = async (query) =>{
   const products = await ProductModel.find({$text :{$search:query}})
   .populate("category","_id name")
-  .populate("subs","_id name")
+
   return products
 }
 const handleStar = async (stars) => {
@@ -196,25 +240,18 @@ const handleStar = async (stars) => {
 
   const products = await ProductModel.find({ _id: { $in: productIds } })
     .populate("category", "_id name")
-    .populate("subs", "_id name");
+   
 
   return products;
 };
 const handleColor = async (color) => {
   const products = await ProductModel.find({ color })
     .populate("category", "_id name")
-    .populate("subs", "_id name");
   return products;
 };
-const handleBrand = async (brand) =>{
-  const products = await ProductModel.find({brand})
-  .populate("category","_id name")
-  .populate("subs","_id name")
 
-  return products
-}
 export const searchFilters = async (searchData) =>{
-const {query,price ,category,stars,sub,color,brand} = searchData
+const {query,price ,category,stars,color,brand} = searchData
 
 if (query) {
   console.log("query ---->", query);
@@ -232,18 +269,11 @@ if (stars) {
   console.log("starts -->",stars);
   await handleStar( stars);
 }
-if (sub) {
-  console.log("sub ---> ", sub);
-  await handleSub( sub);
-}
+
 
 if (color) {
   console.log("color ---> ", color);
   await handleColor( color);
 }
 
-if (brand) {
-  console.log("brand ---> ", brand);
-  await handleBrand(brand);
-}
 }

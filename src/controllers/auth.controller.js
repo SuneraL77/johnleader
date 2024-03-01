@@ -1,6 +1,6 @@
 import { createUser, signUser } from "../services/auth.service.js";
 import { generateToken } from "../services/token.service.js";
-import createHttpError from 'http-errors';
+
 
 export const register=async (req,res,next) =>{
     try {
@@ -59,7 +59,7 @@ export const  login = async (req,res,next) => {
   res.cookie("refreshToken",refresh_token,{
     httpOnly:true,
     path:"/api/v1/auth/refreshtoken",
-    maxAge:30* 24* 60 * 1000, //30day
+    maxAge:30 * 24* 60 * 1000, //30day
   })
   res.json({
     message: "login success",

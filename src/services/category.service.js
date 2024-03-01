@@ -3,7 +3,7 @@ import { CategoryModel, SubModel, ProductModel } from "../models/index.js";
 import slugify from "slugify";
 import fs from "fs/promises";
 
-export const createCategory = async (categoryData) => {
+export const createCategory1 = async (categoryData) => {
   const { name, path, filename } = categoryData;
 
   if (!name || !path || !filename) {
@@ -15,11 +15,16 @@ export const createCategory = async (categoryData) => {
 
     throw createHttpError.BadRequest("image and name not found category data");
   }
+  const checkDb = await CategoryModel.findOne({ slug: slugify(name) });
+  if (checkDb) {
+    throw createHttpError.BadRequest("This category is alradey added");
+  }
+
   const category = new CategoryModel({
     name,
     slug: slugify(name),
     image: {
-      file: filename,
+      filename: filename,
       path: path,
     },
   }).save();
@@ -35,7 +40,17 @@ export const categoryRead = async (slug) => {
   return { category, products };
 }
 export const categoryUpdate = async (categoryData) => {
-  const { name, slug, file, path } = categoryData;
+  const { name, slug, filename, path } = categoryData;
+  const checkDb = await CategoryModel.findOne({ slug });
+  if (!checkDb) {
+    try {
+      await fs.unlink(path);
+    } catch (unlinkError) {
+      throw createHttpError.BadRequest(unlinkError);
+    }
+    throw createHttpError.BadRequest("slug not defin");
+  }
+
   if (!name) {
     try {
       await fs.unlink(path);
@@ -45,22 +60,27 @@ export const categoryUpdate = async (categoryData) => {
 
     throw createHttpError.BadRequest("all field are required");
   }
-  if (file.length > 0 || path.length > 0) {
-    const updateCategory = await CategoryModel.findByIdAndUpdate(
+  if (filename.length > 0 || path.length > 0) {
+    try {
+      await fs.unlink(checkDb.image.path);
+    } catch (unlinkError) {
+      throw createHttpError.BadRequest(unlinkError);
+    }
+    const update = await CategoryModel.findOneAndUpdate(
       { slug: slug },
       {
         name: name,
         slug: slugify(name),
-        "image.filename": file,
+        "image.filename": filename,
         "image.path": path,
       },
       { new: true }
     );
 
-    return updateCategory;
+    return update;
   }
 
-  const updateCateory = await CategoryModel.findOneAndUpdate(
+  const update = await CategoryModel.findOneAndUpdate(
     { slug: slug },
     {
       name,
@@ -68,7 +88,8 @@ export const categoryUpdate = async (categoryData) => {
     },
     { new: true }
   );
-  return updateCateory;
+
+  return update;
 }
 export const ctegoryImg = async (slug) => {
   const viewImg = await CategoryModel.findOne({ slug });

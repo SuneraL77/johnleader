@@ -66,19 +66,33 @@ export const updateUser = async (updateData) => {
   const updatedUser = await existingUser.save();
   return updatedUser;
 };
-export const viewalluser = async () => {
-  const users = await UserModel.findOne({});
+export const findUsers = async () => {
+  const {userId, sort, order, page } = listData;
+  const user = await UserModel.findById(userId);
+  if(user.role !=='admin'){
+    throw createHttpError.BadRequest("Can't access other users")
+  }
+  const currentPage = page || 1;
+  const perpage = (page = 12);
+  const users = await UserModel.findOne({})  
+  .skip((currentPage - 1) * perpage)
+  .sort([[sort, order]])
+  .limit(perpage);
   return users;
 };
 
 export const updateUserRole = async (userData) => {
-  const { userId, role } = userData;
+  const {userId,user,role } = userData;
+  const adminuser = await UserModel.findById(userId);
+  if(adminuser.role !== 'admin' ){
+    throw createHttpError.BadRequest("you can't change user")
+  }
   const valideRoles = ["user", "admin"];
   if (!valideRoles.includes(role)) {
     throw createHttpError.BadRequest("Invalide role specified");
   }
   const updateUserRole = await UserModel.findByIdAndUpdate(
-    userId,
+    user,
     {
       role: newRole,
     },
@@ -118,15 +132,20 @@ const {userId, line1,
 
   return user
 }
-export const deleteUser = async (userId) => {
-  const user = await UserModel.findById(userId);
-  if (!user) {
+export const deleteUser = async (userData) => {
+  const {userId,user}  = userData;
+  const checkusr = await UserModel.findById(userId);
+  if(checkusr.role !== 'user'){
+    throw createHttpError.BadRequest('In valid user')
+  }
+  const user1 = await UserModel.findById(user);
+  if (!user1) {
     createHttpError.BadRequest("can't find user");
   }
-  if (user.propic.length > 0) {
+  if (user1.propic.length > 0) {
     await fs.unlink(user.propic.path);
   }
-  const deleted = await UserModel.findByIdAndDelete(userId);
+  const deleted = await UserModel.findByIdAndDelete(user);
   return deleted;
 };
 
@@ -242,7 +261,7 @@ const user = await UserModel.findOneAndUpdate(
 return user
 }
 export const wishlists = async (userId) =>{
-  const lists = await UserModel.find(userId).select('wishlist').populate('wishlist')
+  const lists = await UserModel.find(userId).select('wishlist').populate('product')
   return lists
 }
 export const removeWishlist = async (wishlistData) =>{
